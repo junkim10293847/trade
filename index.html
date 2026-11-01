@@ -105,6 +105,9 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 .ends .num{font-size:12px}
 .px{display:flex;gap:16px;font-size:13px;color:var(--sub)}
 .px .num{color:var(--fg)}
+.ph .pill{display:inline-block}
+.pos .ph > div:last-child{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+
 .divider{height:1px;background:var(--line);margin:4px 0}
 
 .wait{display:flex;flex-wrap:wrap;gap:8px}
@@ -258,8 +261,9 @@ const SAMPLE = {
 - 2026-10-21 13:00 KST · **매수** NAVER 3주 @ 186,500원 (예산 600,000원) → 접수`
 };
 
-const VERSION = 7;
+const VERSION = 8;
 const CHANGES = [
+  [8,"11/2","보유 종목에 손익 금액(원) 표시, UI 소폭 개선"],
   [7,"11/1","추천 후보를 코스피 시가총액 상위 약 100개로 확대"],
   [6,"11/1","우량주 65개로 확대, 최대 3종목 추천, 기록은 3건만 보이고 접기"],
   [5,"11/1","버전 표시와 변경 내역 추가"],
@@ -341,6 +345,8 @@ function render(){
   $("rate").textContent = sign(t.rate); $("rate").className = "rate num "+cls(t.rate);
   const open = krOpen();
   $("market").innerHTML = `<i class="dot ${open?"on":""}"></i>국내장 ${open?"열림":"닫힘"}`;
+  $("run").textContent = open ? "지금 실행" : "다음 개장 시 실행";
+  $("run").style.opacity = open ? "1" : "0.65";
   $("updated").textContent = "마지막 실행 " + (status?.updated ? new Date(status.updated).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}) : "아직 없음");
   $("rule").textContent = `익절 +${tp}% · 손절 ${sl}% · ${hd}일`;
   const rc = status?.record || {};
@@ -371,16 +377,22 @@ function render(){
   const held = status?.positions || [];
   $("posCount").textContent = held.length?`${held.length}종목`:"";
   const lo = sl*1.3, hi = tp*1.3, pct = v => Math.max(0,Math.min(100,(v-lo)/(hi-lo)*100));
-  $("pos").innerHTML = held.length ? held.map((h,i)=>`${i?'<div class="divider"></div>':""}
+  $("pos").innerHTML = held.length ? held.map((h,i)=>{
+    const pnlAmt = (h.now - h.avg) * h.qty;
+    return `${i?'<div class="divider"></div>':""}
     <div class="ph"><div><span class="t">${esc(h.name)}</span><span class="q">${h.qty}주${h.days!=null?` · ${h.days}/${hd}일`:""}</span></div>
-      <span class="pill num ${cls(h.rate)}">${sign(h.rate)}</span></div>
+      <div style="text-align:right">
+        <span class="pill num ${cls(h.rate)}">${sign(h.rate)}</span>
+        <div class="num" style="font-size:12px;font-weight:600;margin-top:3px;color:var(--${h.rate>0?'up':h.rate<0?'down':'sub'})">${(pnlAmt>0?'+':'')+won(pnlAmt)}</div>
+      </div></div>
     <div class="range" aria-label="손절 ${sl}%와 익절 +${tp}% 사이 현재 위치">
       <div class="track"></div><div class="zero" style="left:${pct(0)}%"></div>
       <div class="zero" style="left:${pct(sl)}%;background:var(--down);opacity:1"></div>
       <div class="zero" style="left:${pct(tp)}%;background:var(--up);opacity:1"></div>
       <div class="mark ${cls(h.rate)}" style="left:${pct(h.rate)}%"></div></div>
     <div class="ends"><span>손절 <span class="num">${sl}%</span></span><span>익절 <span class="num">+${tp}%</span></span></div>
-    <div class="px"><span>평균 <span class="num">${won(h.avg)}</span></span><span>현재 <span class="num">${won(h.now)}</span></span></div>`).join("")
+    <div class="px"><span>평균 <span class="num">${won(h.avg)}</span></span><span>현재 <span class="num">${won(h.now)}</span></span></div>`;
+  }).join("")
     : `<div class="empty">아직 산 종목이 없습니다</div>`;
 
   // 대기
