@@ -105,9 +105,6 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 .ends .num{font-size:12px}
 .px{display:flex;gap:16px;font-size:13px;color:var(--sub)}
 .px .num{color:var(--fg)}
-.ph .pill{display:inline-block}
-.pos .ph > div:last-child{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-
 .divider{height:1px;background:var(--line);margin:4px 0}
 
 .wait{display:flex;flex-wrap:wrap;gap:8px}
@@ -138,6 +135,39 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 .sheet input{font:inherit;padding:13px 14px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--fg);width:100%}
 .sheet ol{margin:0;padding-left:20px;color:var(--sub);font-size:13px;display:flex;flex-direction:column;gap:2px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(96px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--ink-fg);padding:11px 18px;border-radius:999px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
+
+/* v9 */
+.status-bar{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 4px}
+.status-chip{font-size:12px;font-weight:600;padding:5px 10px;border-radius:999px;display:inline-flex;align-items:center;gap:5px}
+.status-chip .dot{width:6px;height:6px;border-radius:50%;margin:0;background:currentColor}
+.status-chip.on{background:#E8F8EF;color:#067F4C}
+.status-chip.off{background:#F3F4F6;color:#6B7280}
+.status-chip.pause{background:#FFF6E5;color:#B7791F}
+.status-chip.live{background:#FDECEC;color:#C53030}
+.status-chip.demo{background:#EEEBFD;color:#6A5AE0}
+.logo{width:36px;height:36px;border-radius:10px;object-fit:cover;background:var(--line);flex-shrink:0}
+.logo-fallback{width:36px;height:36px;border-radius:10px;display:none;place-items:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.ph-left{display:flex;align-items:center;gap:12px;min-width:0}
+.ph-left .meta-col{min-width:0}
+.ph-left .t{font-weight:700;font-size:16px}
+.ph-left .q{font-size:12px;color:var(--sub);margin-top:1px}
+.pnl-amt{font-size:12px;font-weight:600;margin-top:3px}
+.wchip .cond{font-size:11px;margin-top:2px}
+.wchip .cond.ok{color:#067F4C;font-weight:600}
+.wchip .cond.wait{color:var(--sub)}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]) .status-chip.on{background:#163528;color:#3DD68C}
+  :root:not([data-theme="light"]) .status-chip.off{background:#22262E;color:#9AA0AC}
+  :root:not([data-theme="light"]) .status-chip.pause{background:#33270F;color:#F2B35A}
+  :root:not([data-theme="light"]) .status-chip.live{background:#3A1C1E;color:#FF6B6E}
+  :root:not([data-theme="light"]) .status-chip.demo{background:#25213F;color:#9B8FFF}
+}
+:root[data-theme="dark"] .status-chip.on{background:#163528;color:#3DD68C}
+:root[data-theme="dark"] .status-chip.off{background:#22262E;color:#9AA0AC}
+:root[data-theme="dark"] .status-chip.pause{background:#33270F;color:#F2B35A}
+:root[data-theme="dark"] .status-chip.live{background:#3A1C1E;color:#FF6B6E}
+:root[data-theme="dark"] .status-chip.demo{background:#25213F;color:#9B8FFF}
+
 @media (prefers-reduced-motion:no-preference){.mark{transition:left .6s ease}}
 </style>
 </head><body>
@@ -155,6 +185,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
   </header>
 
   <div id="sample" class="sample" hidden>예시 화면입니다. 오른쪽 위 톱니바퀴에서 연결하면 존박님 실제 계좌가 보입니다.</div>
+
+  <div class="status-bar" id="statusBar" aria-label="모니터링 상태"></div>
 
   <section class="hero" aria-label="요약">
     <div class="lbl">자동매매 평가손익</div>
@@ -261,9 +293,10 @@ const SAMPLE = {
 - 2026-10-21 13:00 KST · **매수** NAVER 3주 @ 186,500원 (예산 600,000원) → 접수`
 };
 
-const VERSION = 8;
+const VERSION = 9;
 const CHANGES = [
-  [8,"11/2","보유 종목에 손익 금액(원) 표시, UI 소폭 개선"],
+  [9,"11/2","모니터링 상태바, 보유 로고·손익금액, 대기 지정가 비교, UI 개선"],
+  [8,"11/2","보유 손익금액·장마감 버튼"],
   [7,"11/1","추천 후보를 코스피 시가총액 상위 약 100개로 확대"],
   [6,"11/1","우량주 65개로 확대, 최대 3종목 추천, 기록은 3건만 보이고 접기"],
   [5,"11/1","버전 표시와 변경 내역 추가"],
@@ -345,10 +378,19 @@ function render(){
   $("rate").textContent = sign(t.rate); $("rate").className = "rate num "+cls(t.rate);
   const open = krOpen();
   $("market").innerHTML = `<i class="dot ${open?"on":""}"></i>국내장 ${open?"열림":"닫힘"}`;
-  $("run").textContent = open ? "지금 실행" : "다음 개장 시 실행";
-  $("run").style.opacity = open ? "1" : "0.65";
   $("updated").textContent = "마지막 실행 " + (status?.updated ? new Date(status.updated).toLocaleString("ko-KR",{month:"numeric",day:"numeric",hour:"2-digit",minute:"2-digit"}) : "아직 없음");
   $("rule").textContent = `익절 +${tp}% · 손절 ${sl}% · ${hd}일`;
+  $("run").textContent = open ? "지금 실행" : "다음 개장 시 실행";
+  $("run").style.opacity = open ? "1" : "0.7";
+  const connected = !!cfg.token;
+  const paused = !!plan.paused;
+  let sb = "";
+  if(!connected) sb += `<span class="status-chip off"><i class="dot"></i>예시 화면</span>`;
+  else if(paused) sb += `<span class="status-chip pause"><i class="dot"></i>일시정지</span>`;
+  else sb += `<span class="status-chip on"><i class="dot"></i>모니터링 중</span>`;
+  sb += mode ? `<span class="status-chip live">실전</span>` : `<span class="status-chip demo">모의</span>`;
+  sb += open ? `<span class="status-chip on">장 열림</span>` : `<span class="status-chip off">장 닫힘</span>`;
+  $("statusBar").innerHTML = sb;
   const rc = status?.record || {};
   $("rWin").textContent = rc.win_rate==null?"-":rc.win_rate+"%";
   $("rWin").className = "v num "+(rc.win_rate==null?"":rc.win_rate>=50?"up":rc.win_rate<45?"down":"");
@@ -377,14 +419,30 @@ function render(){
   const held = status?.positions || [];
   $("posCount").textContent = held.length?`${held.length}종목`:"";
   const lo = sl*1.3, hi = tp*1.3, pct = v => Math.max(0,Math.min(100,(v-lo)/(hi-lo)*100));
+  const logoColors = ["#6A5AE0","#E5383B","#2F6FEB","#059669","#D97706","#7C3AED","#0891B2","#DB2777"];
+  const logoOf = (code, name) => {
+    const c = logoColors[(code||"").split("").reduce((a,ch)=>a+ch.charCodeAt(0),0) % logoColors.length];
+    const initial = (name||code||"?").replace(/\s/g,"").slice(0,2);
+    return `<img class="logo" src="https://ssl.pstatic.net/imgstock/fn/real/logo/stock/${code}.png" alt="" loading="lazy"
+      onerror="this.style.display='none';this.nextElementSibling.style.display='grid'" />
+      <div class="logo-fallback" style="background:${c}">${esc(initial)}</div>`;
+  };
   $("pos").innerHTML = held.length ? held.map((h,i)=>{
     const pnlAmt = (h.now - h.avg) * h.qty;
     return `${i?'<div class="divider"></div>':""}
-    <div class="ph"><div><span class="t">${esc(h.name)}</span><span class="q">${h.qty}주${h.days!=null?` · ${h.days}/${hd}일`:""}</span></div>
+    <div class="ph">
+      <div class="ph-left">
+        ${logoOf(h.code, h.name)}
+        <div class="meta-col">
+          <div class="t">${esc(h.name)}</div>
+          <div class="q">${h.qty}주${h.days!=null?` · ${h.days}/${hd}일`:""}</div>
+        </div>
+      </div>
       <div style="text-align:right">
         <span class="pill num ${cls(h.rate)}">${sign(h.rate)}</span>
-        <div class="num" style="font-size:12px;font-weight:600;margin-top:3px;color:var(--${h.rate>0?'up':h.rate<0?'down':'sub'})">${(pnlAmt>0?'+':'')+won(pnlAmt)}</div>
-      </div></div>
+        <div class="pnl-amt num ${cls(pnlAmt)}">${(pnlAmt>0?"+":"")+won(pnlAmt)}</div>
+      </div>
+    </div>
     <div class="range" aria-label="손절 ${sl}%와 익절 +${tp}% 사이 현재 위치">
       <div class="track"></div><div class="zero" style="left:${pct(0)}%"></div>
       <div class="zero" style="left:${pct(sl)}%;background:var(--down);opacity:1"></div>
@@ -398,7 +456,7 @@ function render(){
   // 대기
   const heldSet = new Set(held.map(h=>h.code));
   const waiting = (plan.stocks||[]).filter(s=>!heldSet.has(s.code));
-  $("wait").innerHTML = waiting.length ? waiting.map(s=>`<div class="wchip"><b>${esc(s.name)}</b><span>${won(+s.max_buy_price)} 이하 · ${won(+s.budget_krw)}</span></div>`).join("")
+  $("wait").innerHTML = waiting.length ? waiting.map(s=>`<div class="wchip"><b>${esc(s.name)}</b><span>지정가 ${won(+s.max_buy_price)} 이하 · 예산 ${won(+s.budget_krw)}</span><span class="cond wait">현재가가 지정가 이하일 때 매수</span></div>`).join("")
     : `<div class="card empty" style="width:100%">대기 중인 종목이 없습니다</div>`;
 
   // 기록
