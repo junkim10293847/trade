@@ -57,7 +57,10 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 
 .sample{font-size:13px;color:var(--warn);background:var(--warn-soft);border-radius:14px;padding:10px 14px}
 
-.hero{background:var(--ink);color:var(--ink-fg);border-radius:var(--r);padding:22px 22px 20px}
+.hero{background:var(--ink);color:var(--ink-fg);border-radius:var(--r);padding:22px 22px 20px;cursor:pointer;user-select:none}
+.hero:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+#detailPanel{display:flex;flex-direction:column;gap:14px}
+#detailPanel[hidden]{display:none}
 .hero .lbl{font-size:13px;color:var(--ink-sub)}
 .hero .big{font-size:34px;font-weight:700;letter-spacing:-.02em;margin:4px 0 2px}
 .hero .rate{font-size:16px;font-weight:700}
@@ -212,10 +215,8 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 
   <div id="sample" class="sample" hidden>예시 화면입니다. 오른쪽 위 톱니바퀴에서 연결하면 존박님 실제 계좌가 보입니다.</div>
 
-  <div class="status-bar" id="statusBar" aria-label="모니터링 상태"></div>
-
-  <section class="hero" aria-label="요약">
-    <div class="lbl">자동매매 평가손익</div>
+  <section class="hero" id="heroToggle" aria-label="전체 수익 요약" role="button" tabindex="0" aria-expanded="false">
+    <div class="lbl">자동매매 평가손익 · 눌러서 종목별 상세 보기</div>
     <div class="big num" id="pnl">0원</div>
     <div class="rate num" id="rate">0.00%</div>
     <div class="meta">
@@ -224,6 +225,9 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
       <span id="rule">익절 +10% · 손절 -7%</span>
     </div>
   </section>
+
+  <div id="detailPanel" hidden>
+  <div class="status-bar" id="statusBar" aria-label="모니터링 상태"></div>
 
   <section class="asset-grid" aria-label="총 보유자산 현황">
     <div class="asset-item">
@@ -276,6 +280,7 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
   <div class="sec"><h2>최근 기록</h2><button id="logCount" class="linkbtn"></button></div>
   <section class="card"><ul id="log" class="log"></ul></section>
   <button id="verBtn" class="ver">버전 확인 중</button>
+  </div><!-- /detailPanel -->
 </div>
 
 <nav class="dock">
@@ -359,7 +364,7 @@ const SAMPLE = {
 - 2026-10-21 13:00 KST · **매수** NAVER 3주 @ 186,500원 (예산 600,000원) → 접수`
 };
 
-const VERSION = 14;
+const VERSION = 15;
 const CHANGES = [
   [14,"11/2","200만원 투자한도·실제 투자액·미체결 예약액·추가 투자 가능액 표시"],
   [13,"11/2","계좌 전체 보유 감시, 실제 투자한도, 종목 교체 선택, 계좌 현황 개선"],
@@ -629,6 +634,21 @@ function render(){
 }
 
 /* ---------- 동작 ---------- */
+function toggleDetails(){
+  const panel = $("detailPanel");
+  const opening = panel.hidden;
+  panel.hidden = !opening;
+  $("heroToggle").setAttribute("aria-expanded", String(opening));
+  const label = $("heroToggle").querySelector(".lbl");
+  label.textContent = opening
+    ? "자동매매 평가손익 · 눌러서 요약 화면으로"
+    : "자동매매 평가손익 · 눌러서 종목별 상세 보기";
+}
+$("heroToggle").addEventListener("click", toggleDetails);
+$("heroToggle").addEventListener("keydown", e=>{
+  if(e.key === "Enter" || e.key === " "){ e.preventDefault(); toggleDetails(); }
+});
+
 function toast(t){ const el=$("toast"); el.textContent=t; el.hidden=false; clearTimeout(el._t); el._t=setTimeout(()=>el.hidden=true,2600) }
 function ask(title, body, fn){
   $("cTitle").textContent=title; $("cBody").textContent=body; $("confirmSheet").hidden=false;
