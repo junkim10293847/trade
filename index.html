@@ -216,7 +216,13 @@ button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline
 .detail-toggle{width:100%;display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-radius:16px;background:var(--card);border:1px solid var(--line);color:var(--fg);font-weight:700;font-size:14px}
 body.compact .asset-grid,body.compact .rec,body.compact #propWrap,
 body.compact .wrap > .sec:not(.recent-sec),body.compact #pos,body.compact #wait,
-body.compact #verBtn{display:none!important}
+body.compact #verBtn,body.compact #propWrap,body.compact .asset-grid,
+body.compact .rec,body.compact #posCard,body.compact #ordersCard{display:none!important}
+/* 메인 요약 화면에서는 보유/주문 카드까지 감춰 중간 빈 공간이 생기지 않게 한다 */
+body.compact .wrap > .card:not(#recentCard){display:none!important}
+body.compact #recentCard{display:block!important}
+#logCount{min-width:76px;min-height:34px;text-align:right;touch-action:manipulation}
+#recentCard[hidden]{display:none!important}
 body.compact .status-bar{display:flex!important}
 body.compact #log{display:flex!important}
 body.compact .recent-sec{display:flex!important}
@@ -310,16 +316,16 @@ body:not(.compact) .detail-toggle span:last-child{transform:rotate(180deg)}
   <section id="propWrap" hidden></section>
 
   <div class="sec"><h2>보유 중</h2><span id="posCount"></span></div>
-  <section class="card"><div id="pos" class="pos"></div></section>
+  <section id="posCard" class="card"><div id="pos" class="pos"></div></section>
 
   <div class="sec"><h2>주문·체결 현황</h2><span id="orderCount"></span></div>
-  <section class="card"><div id="orders" class="orders"></div></section>
+  <section id="ordersCard" class="card"><div id="orders" class="orders"></div></section>
 
   <div class="sec"><h2>매수 대기</h2><div class="sec-actions"><button id="skipAllWait" class="linkbtn" type="button">전부 넘기기</button><button id="newPlan" class="linkbtn">새 계획 받기</button></div></div>
   <div id="wait" class="wait"></div>
 
   <div class="sec recent-sec"><h2>최근 기록</h2><button id="logCount" class="linkbtn"></button></div>
-  <section class="card"><ul id="log" class="log"></ul></section>
+  <section id="recentCard" class="card"><ul id="log" class="log"></ul></section>
   <button id="verBtn" class="ver">버전 확인 중</button>
 </div>
 
@@ -709,7 +715,9 @@ function render(){
   // 기록
   const all = (log||"").split("\n").filter(l=>l.startsWith("- ")).reverse();
   const lines = all.slice(0, logOpen?20:3);
-  $("logCount").textContent = all.length>5 ? (logOpen?"접기":`더 보기 (${Math.min(all.length,20)}건)`) : "";
+  $("logCount").textContent = all.length>3 ? (logOpen?"접기 ▲":`더 보기 (${Math.min(all.length,20)}건) ▼`) : "";
+  $("logCount").setAttribute("aria-expanded", String(logOpen));
+  $("logCount").hidden = all.length<=3;
   $("log").innerHTML = lines.length ? lines.map(l=>{
     const m = l.match(/^- (\d{4}-(\d\d)-(\d\d) (\d\d:\d\d)) KST · (.*)$/);
     const when = m?`${+m[2]}/${+m[3]} ${m[4]}`:"";
@@ -861,7 +869,12 @@ $("verBtn").onclick = () => {
   $("verList").innerHTML = CHANGES.map(([v,d,t])=>`<li><b>v${v}</b><span>${esc(t)}</span><time>${d}</time></li>`).join("");
   $("verSheet").hidden = false;
 };
-$("logCount").onclick = () => { logOpen = !logOpen; render() };
+$("logCount").addEventListener("click", (event) => {
+  event.preventDefault();
+  event.stopPropagation();
+  logOpen = !logOpen;
+  render();
+});
 $("verClose").onclick = () => $("verSheet").hidden = true;
 $("gear").onclick = () => { $("tok").value=cfg.token; $("repo").value=cfg.repo; $("sheet").hidden=false };
 $("cfgClose").onclick = () => $("sheet").hidden=true;
