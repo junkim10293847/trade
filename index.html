@@ -806,6 +806,7 @@ function render(){
     health.title = `${api.checked||""} ${api.message||""}`;
   } else { health.className="status-chip off"; health.textContent="API 연결 확인 전"; health.title="지금 한 번 실행으로 연결을 확인하세요"; }
   $("rule").textContent = plan.tp_mode==="trail" ? `추적 익절 +${tp}%부터 · 최고가 -${plan.trail_pct??2}% · 손절 ${sl}% · ${hd}일` : `익절 +${tp}% · 손절 ${sl}% · ${hd}일`;
+  if(plan.stop_hold_until && plan.stop_hold_until >= new Date(Date.now()+9*3600e3).toISOString().slice(0,10)) $("rule").textContent += ` · 손절 보류 ~${plan.stop_hold_until.slice(5).replace("-","/")}`;
   const connected = !!cfg.token;
   const paused = !!plan.paused;
   let sb = "";
